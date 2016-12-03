@@ -13,7 +13,7 @@ import net.md_5.specialsource.JarRemapper;
 
 public class Converter {
 
-    static boolean remap;
+    static boolean remap = false;
     static JarMapping mapping;
     static JarRemapper remapper;
 
@@ -56,7 +56,7 @@ public class Converter {
                 desc = split.substring(index, split.length());
             }
 
-            List<String> nameSplit = new ArrayList<String>(Arrays.asList(lineSplit[1].split("\\/")));
+            List<String> nameSplit = new ArrayList<String>(Arrays.asList(name.split("\\/")));
             String nameOf = nameSplit.remove(nameSplit.size()-1);
             String classOf = String.join(".", nameSplit);
 
