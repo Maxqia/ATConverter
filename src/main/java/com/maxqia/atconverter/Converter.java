@@ -6,10 +6,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 
 import net.md_5.specialsource.JarMapping;
 import net.md_5.specialsource.JarRemapper;
+import net.md_5.specialsource.transformer.MavenShade;
 
 public class Converter {
 
@@ -25,7 +27,7 @@ public class Converter {
                 remap = true; // load mapping
                 mapping = new JarMapping();
                 mapping.loadMappings(args[1],
-                        false, false, null, null);
+                        false, false, "net/minecraft/server/v1_10_R1=net/minecraft/server", null);
                 remapper = new JarRemapper(mapping);
             }
             doLoop(bufferedReader);
@@ -62,20 +64,18 @@ public class Converter {
 
             if (remap) {
                 String intClass = String.join("/", nameSplit); // join class name again, but with internal name
-                toLine.add(remapper.map(intClass)); // add class line
+                toLine.add(remapper.map(intClass).replace('/', '.')); // add class line
 
                 //int index = nameOf.indexOf('('); // find desc
-                if (index == -1) {
+                if (desc.isEmpty()) {
                     // didn't find desc, must be a field!
                     toLine.add(remapper.mapFieldName(intClass, nameOf, null));
                 } else {
-                    String methodName = nameOf.substring(0, index);
-                    String methodDesc = nameOf.substring(index, nameOf.length());
-                    String rmmethNm = remapper.mapMethodName(intClass, methodName, methodDesc);
-                    String rmmethDc =remapper.mapMethodDesc(methodDesc);
-                    toLine.add(rmmethNm+rmmethDc);
+                    String methodName = remapper.mapMethodName(intClass, nameOf, desc);
+                    String methodDesc = remapper.mapMethodDesc(desc);
+                    toLine.add(methodName+methodDesc);
                 }
-                toLine.add("#" + "nameOf"); // add comment of original name
+                toLine.add("#" + nameOf); // add comment of original name
             } else {
                 toLine.add(classOf);
                 toLine.add(nameOf+desc);
