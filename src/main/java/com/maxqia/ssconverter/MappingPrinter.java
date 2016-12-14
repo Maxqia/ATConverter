@@ -8,6 +8,8 @@ import java.io.PrintWriter;
 import java.nio.file.NotLinkException;
 import java.util.Map.Entry;
 
+import org.objectweb.asm.commons.Remapper;
+
 import net.md_5.specialsource.JarMapping;
 import net.md_5.specialsource.JarRemapper;
 import net.md_5.specialsource.NodeType;
@@ -19,7 +21,7 @@ import net.md_5.specialsource.writer.Searge;
  * Takes a CSRG file and converts it into a SRG file
  * @author Maxqia
  */
-public class MappingPrinter {
+public class MappingPrinter extends Remapper {
 
     static JarMapping mapping;
     static JarRemapper remapper;
@@ -32,7 +34,7 @@ public class MappingPrinter {
                     false, false, null, null);
             remapper = new JarRemapper(mapping);
             writer = new Searge(args[0], "itself");
-            jarMappingToWriter(mapping, writer);
+            new MappingPrinter().jarMappingToWriter(mapping, writer);
             writer.write(new PrintWriter(System.out));
         } else {
             throw new NotLinkException("No file defined");
@@ -40,9 +42,9 @@ public class MappingPrinter {
         //throw new NotLinkException("No file defined");
     }
 
-    public static void jarMappingToWriter(JarMapping mapping, MappingWriter writer) {
+    public void jarMappingToWriter(JarMapping mapping, MappingWriter writer) {
         for (Entry<String, String> entry : mapping.classes.entrySet()) {
-            writer.addClassMap(entry.getKey(), entry.getValue());
+            writer.addClassMap(entry.getKey(), remapper.map(entry.getKey()));
         }
 
         for (Entry<String, String> entry : mapping.fields.entrySet()) {
@@ -51,7 +53,7 @@ public class MappingPrinter {
             String field = fieldSplit.substring(fieldLoc+1, fieldSplit.length()); // add one to avoid dash
             String owner = fieldSplit.substring(0, fieldLoc);
 
-            Ownable original = new Ownable(NodeType.METHOD, owner, field, null, 0);
+            Ownable original = new Ownable(NodeType.METHOD, this.map(owner), field, null, 0);
             Ownable modified = new Ownable(NodeType.FIELD, remapper.map(owner), entry.getValue(), null, 0);
             writer.addFieldMap(original, modified);
         }
@@ -65,9 +67,21 @@ public class MappingPrinter {
             String method = methodSplit.substring(methodLoc+1, methodSplit.length()); // add one to avoid dash
             String owner = methodSplit.substring(0, methodLoc);
 
-            Ownable original = new Ownable(NodeType.METHOD, owner, method, descriptor, 0);
+            Ownable original = new Ownable(NodeType.METHOD, this.map(owner), method, this.mapMethodDesc(descriptor), 0);
             Ownable modified = new Ownable(NodeType.METHOD, remapper.map(owner), entry.getValue(), remapper.mapMethodDesc(descriptor), 0);
             writer.addMethodMap(original, modified);
         }
     }
+
+    @Override
+    public String map(String owner) {
+        for (Entry<String, String> entry : mapping.classes.entrySet()) {
+            if (owner.equals(entry.getValue())) {
+                String[] split = entry.getKey().split("\\/");
+                return split[split.length-1];
+            }
+        }
+        return owner; // fallback if there's none found
+    }
+
 }
