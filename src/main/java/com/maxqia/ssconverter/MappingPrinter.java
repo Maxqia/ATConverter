@@ -32,8 +32,11 @@ public class MappingPrinter extends Remapper {
             mapping = new JarMapping();
             mapping.loadMappings(args[0],
                     false, false, null, null);
+            //mapping.packages.put(".", "net/minecraft/server/");
+            mapping.packages.put(".", "net/minecraft/server/v1_11_R1/");
+            mapping.packages.put("net/minecraft/server/", "net/minecraft/server/v1_11_R1/");
             remapper = new JarRemapper(mapping);
-            writer = new Searge(args[0], "itself");
+            writer = new Searge(args[0], "itself, using Maxqia's MappingPrinter");
             new MappingPrinter().jarMappingToWriter(mapping, writer);
             writer.write(new PrintWriter(System.out));
         } else {
@@ -44,7 +47,7 @@ public class MappingPrinter extends Remapper {
 
     public void jarMappingToWriter(JarMapping mapping, MappingWriter writer) {
         for (Entry<String, String> entry : mapping.classes.entrySet()) {
-            writer.addClassMap(entry.getKey(), remapper.map(entry.getKey()));
+            writer.addClassMap(entry.getKey(), remapper.map(remapper.map(entry.getKey()))); // csrg is weird ...
         }
 
         for (Entry<String, String> entry : mapping.fields.entrySet()) {
@@ -53,7 +56,7 @@ public class MappingPrinter extends Remapper {
             String field = fieldSplit.substring(fieldLoc+1, fieldSplit.length()); // add one to avoid dash
             String owner = fieldSplit.substring(0, fieldLoc);
 
-            Ownable original = new Ownable(NodeType.METHOD, this.map(owner), field, null, 0);
+            Ownable original = new Ownable(NodeType.FIELD, this.map(owner), field, null, 0);
             Ownable modified = new Ownable(NodeType.FIELD, remapper.map(owner), entry.getValue(), null, 0);
             writer.addFieldMap(original, modified);
         }
