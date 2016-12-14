@@ -1,4 +1,4 @@
-package com.maxqia.atconverter;
+package com.maxqia.ssconverter;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -13,7 +13,11 @@ import net.md_5.specialsource.JarMapping;
 import net.md_5.specialsource.JarRemapper;
 import net.md_5.specialsource.transformer.MavenShade;
 
-public class Converter {
+/**
+ * Takes a SpecialSource AT translation and converts it to Forge.
+ * @author Maxqia
+ */
+public class ATConverter {
 
     static boolean remap = false;
     static JarMapping mapping;
