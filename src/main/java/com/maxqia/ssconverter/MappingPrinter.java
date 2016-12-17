@@ -1,21 +1,18 @@
 package com.maxqia.ssconverter;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.nio.file.NotLinkException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map.Entry;
 
 import org.objectweb.asm.commons.Remapper;
 
+import com.google.common.collect.Sets;
+
 import net.md_5.specialsource.JarMapping;
 import net.md_5.specialsource.JarRemapper;
-import net.md_5.specialsource.NodeType;
-import net.md_5.specialsource.Ownable;
-import net.md_5.specialsource.writer.MappingWriter;
-import net.md_5.specialsource.writer.Searge;
 
 /**
  * Takes a CSRG file and converts it into a SRG file
@@ -25,7 +22,8 @@ public class MappingPrinter extends Remapper {
 
     static JarMapping mapping;
     static JarRemapper remapper;
-    static MappingWriter writer;
+
+    static HashSet<String> lines = Sets.newLinkedHashSet();
 
     public static void main(String[] args) throws IOException {
         if (args.length >= 1) {
@@ -36,29 +34,27 @@ public class MappingPrinter extends Remapper {
             mapping.packages.put(".", "net/minecraft/server/v1_11_R1/");
             mapping.packages.put("net/minecraft/server/", "net/minecraft/server/v1_11_R1/");
             remapper = new JarRemapper(mapping);
-            writer = new Searge(args[0], "itself, using Maxqia's MappingPrinter");
-            new MappingPrinter().jarMappingToWriter(mapping, writer);
-            writer.write(new PrintWriter(System.out));
+            new MappingPrinter().jarMappingToSet(mapping);
+            printSet();
         } else {
             throw new NotLinkException("No file defined");
         }
         //throw new NotLinkException("No file defined");
     }
 
-    public void jarMappingToWriter(JarMapping mapping, MappingWriter writer) {
+    public void jarMappingToSet(JarMapping mapping) {
         for (Entry<String, String> entry : mapping.classes.entrySet()) {
-            writer.addClassMap(entry.getKey(), remapper.map(remapper.map(entry.getKey()))); // csrg is weird ...
+            addClassMap(entry.getKey(), remapper.map(entry.getValue()));
         }
 
         for (Entry<String, String> entry : mapping.fields.entrySet()) {
             String fieldSplit = entry.getKey();
             int fieldLoc = fieldSplit.lastIndexOf('/');
             String field = fieldSplit.substring(fieldLoc+1, fieldSplit.length()); // add one to avoid dash
-            String owner = fieldSplit.substring(0, fieldLoc);
 
-            Ownable original = new Ownable(NodeType.FIELD, this.map(owner), field, null, 0);
-            Ownable modified = new Ownable(NodeType.FIELD, remapper.map(owner), entry.getValue(), null, 0);
-            writer.addFieldMap(original, modified);
+            String owner = fieldSplit.substring(0, fieldLoc);
+            addClassMap(owner);
+            lines.add("FD: " + this.map(owner) + "/" + field + " " + remapper.map(owner) + "/" + entry.getValue());
         }
 
         for (Entry<String, String> entry : mapping.methods.entrySet()) {
@@ -68,12 +64,40 @@ public class MappingPrinter extends Remapper {
             String methodSplit = descriptorSplit[0];
             int methodLoc = methodSplit.lastIndexOf('/');
             String method = methodSplit.substring(methodLoc+1, methodSplit.length()); // add one to avoid dash
-            String owner = methodSplit.substring(0, methodLoc);
 
-            Ownable original = new Ownable(NodeType.METHOD, this.map(owner), method, this.mapMethodDesc(descriptor), 0);
-            Ownable modified = new Ownable(NodeType.METHOD, remapper.map(owner), entry.getValue(), remapper.mapMethodDesc(descriptor), 0);
-            writer.addMethodMap(original, modified);
+            String owner = methodSplit.substring(0, methodLoc);
+            addClassMap(owner);
+
+            lines.add("MD: " + this.map(owner) + "/" + method + " " + this.mapMethodDesc(descriptor) + " "
+                    + remapper.map(owner) + "/" + entry.getValue() + " " + remapper.mapMethodDesc(descriptor));
         }
+    }
+
+    public void addClassMap(String string) {
+        addClassMap(this.map(string), remapper.map(string));
+    }
+
+    public static void addClassMap(String from, String to) {
+        /*if (!to.contains("v1_11_R1"))
+            System.out.println();*/
+        lines.add("CL: " + from + " " + to);
+    }
+
+    public static void printSet() {
+        System.out.println("# Generated using Maxqia's MappingPrinter");
+        System.out.println();
+
+        ArrayList<String> finalList = new ArrayList<String>();
+        finalList.addAll(lines);
+        Collections.sort(finalList);
+        for (String string : finalList) {
+            System.out.println(string);
+        }
+    }
+
+    // csrg is weird ...
+    public static String doubleMap(String string) {
+        return remapper.map(remapper.map(string));
     }
 
     @Override

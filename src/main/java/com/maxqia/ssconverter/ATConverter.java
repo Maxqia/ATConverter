@@ -6,12 +6,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 import net.md_5.specialsource.JarMapping;
 import net.md_5.specialsource.JarRemapper;
-import net.md_5.specialsource.transformer.MavenShade;
 
 /**
  * Takes a SpecialSource AT translation and converts it to Forge.
@@ -31,7 +29,7 @@ public class ATConverter {
                 remap = true; // load mapping
                 mapping = new JarMapping();
                 mapping.loadMappings(args[1],
-                        false, false, "net/minecraft/server/v1_10_R1=net/minecraft/server", null);
+                        false, false, args.length >= 3 ? args[2] : null, null); // "net/minecraft/server/v1_11_R1=net/minecraft/server"
                 remapper = new JarRemapper(mapping);
             }
             doLoop(bufferedReader);
